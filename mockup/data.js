@@ -1,0 +1,118 @@
+/* Panoramic · datos ficticios y modelo de datos (mockup)
+   Formato de campo:  nombre:tipo [UNIQUE] [NULL] [INDEX] # descripción
+   Tipos: uuid · string · text · int · decimal · bool · date · datetime · json · enum(a,b) · FK modulo
+   Tipos de columna de la tabla visual:
+   p persona · x texto 2 líneas (principal|secundario) · c código · t texto · g etiqueta · s estado
+   n número · m moneda · mv moneda con signo · b progreso % · k stock (actual/mínimo) · d fecha · r calificación */
+
+// Campos transversales: se agregan a TODAS las tablas (auditoría, borrado lógico y concurrencia)
+const U='id:uuid PK # Identificador único (UUID v4)'
++'|creado_en:datetime # Fecha de creación'
++'|creado_por:FK usuarios NULL # Usuario que creó el registro'
++'|actualizado_en:datetime # Última modificación'
++'|actualizado_por:FK usuarios NULL # Usuario que modificó por última vez'
++'|eliminado_en:datetime NULL # Borrado lógico (NULL = vigente)'
++'|version:int # Control de concurrencia optimista';
+
+const M={
+usuarios:{i:'users',t:'Usuarios',g:'Personas',d:'Cuentas de acceso al sistema y su perfil.',
+ c:[['Usuario','p'],['Rol','g'],['Departamento','t'],['Último acceso','d'],['MFA','t'],['Estado','s']],
+ r:[['Luis Marroquín|luis@panoramic.gt','Administrador','Administración','Hoy 08:12','Activado','Activo'],
+ ['Ana Cifuentes|ana@panoramic.gt','Maestro de Obra','Obra civil','Hoy 07:40','Activado','Activo'],
+ ['Pedro Xol|pedro@panoramic.gt','Obrero','Obra civil','Hace 12 días','No','Inactivo'],
+ ['Rosa Ajú|rosa@panoramic.gt','Administrativo','Compras','Ayer 17:05','Activado','Activo'],
+ ['Carlos Tzoc|carlos@panoramic.gt','Obrero','Obra civil','Hoy 06:55','No','Activo'],
+ ['Sofía Barrios|sofia@panoramic.gt','Contador','Contabilidad','Hoy 09:03','Activado','Activo'],
+ ['Julio Pérez|julio@panoramic.gt','Bodeguero','Bodega','Hoy 07:10','No','Activo'],
+ ['Marta Gómez|marta@panoramic.gt','Administrativo','Tesorería','—','No','Pendiente']],
+ ex:['Con MFA activo','4 de 8'],
+ f:'trabajador_id:FK trabajadores NULL UNIQUE # Persona de planilla vinculada a la cuenta|nombres:string # Nombres|apellidos:string # Apellidos|email:string UNIQUE # Correo (usuario de acceso)|password_hash:string # Hash bcrypt, nunca texto plano|telefono:string NULL # Teléfono de contacto|avatar_url:string NULL # Foto de perfil|rol_id:FK roles # Rol asignado|departamento_id:FK departamentos # Departamento|idioma:enum(es,en) # Idioma de la interfaz|tema:enum(claro,oscuro,sistema) # Preferencia de apariencia|mfa_activo:bool # Verificación en dos pasos|mfa_secreto:string NULL # Secreto TOTP cifrado|intentos_fallidos:int # Contador para bloqueo|bloqueado_hasta:datetime NULL # Bloqueo temporal por intentos|debe_cambiar_clave:bool # Obliga cambio en el próximo ingreso|ultimo_acceso:datetime NULL # Último inicio de sesión exitoso|ultima_ip:string NULL # IP del último acceso|token_recuperacion:string NULL # Token de restablecimiento|estado:enum(activo,inactivo,pendiente,bloqueado) # Estado de la cuenta'},
+
+roles:{i:'shield',t:'Roles',g:'Personas',d:'Perfiles de acceso y permisos por módulo.',
+ c:[['Rol','x'],['Nivel','n'],['Usuarios','n'],['Módulos','n'],['Estado','s']],
+ r:[['Administrador|Acceso total al sistema',1,2,16,'Activo'],['Administrativo|Compras, tesorería y reportes',2,3,9,'Activo'],['Contador|Contabilidad NIIF y reportes',2,1,5,'Activo'],['Maestro de Obra|Obra, bodega y personal',3,4,7,'Activo'],['Bodeguero|Movimientos de bodega',3,2,3,'Activo'],['Obrero|Consulta y solicitudes',4,38,3,'Activo'],['Auditor|Solo lectura global',4,1,6,'Inactivo']],
+ ex:['Permisos definidos','64'],
+ f:'codigo:string UNIQUE # Código corto (ADMIN, MAESTRO…)|nombre:string UNIQUE # Nombre visible|descripcion:text NULL # Alcance del rol|nivel:int # Jerarquía (1 = mayor acceso)|es_sistema:bool # Rol protegido, no editable|permisos:json # Matriz módulo → ver/crear/editar/borrar/aprobar|modulos_visibles:json # Módulos del menú|restringe_por_proyecto:bool # Limita datos a sus proyectos|requiere_mfa:bool # Obliga MFA a este rol|activo:bool # Disponible para asignar'},
+
+catalogos:{i:'book',t:'Catálogos',g:'Datos',d:'Listas maestras: unidades, monedas, categorías, cuentas.',
+ c:[['Código','c'],['Nombre','t'],['Tipo','g'],['Orden','n'],['Estado','s']],
+ r:[['M3','Metro cúbico','Unidad',1,'Activo'],['M2','Metro cuadrado','Unidad',2,'Activo'],['KG','Kilogramo','Unidad',3,'Activo'],['GTQ','Quetzal','Moneda',1,'Activo'],['USD','Dólar estadounidense','Moneda',2,'Activo'],['CEM','Cementos','Categoría',1,'Activo'],['ACE','Aceros y varillas','Categoría',2,'Activo'],['BR-001','Banrural · Cta. monetaria','Cuenta bancaria',1,'Inactivo']],
+ ex:['Tipos de catálogo','9'],
+ f:'tipo:string INDEX # Familia (unidad, moneda, categoría, banco…)|codigo:string # Código corto dentro del tipo|nombre:string # Nombre visible|descripcion:text NULL # Notas de uso|padre_id:FK catalogos NULL # Jerarquía (categoría → subcategoría)|valor_extra:json NULL # Datos propios del tipo (tasa, símbolo…)|orden:int # Orden de despliegue|es_sistema:bool # No eliminable|activo:bool # Disponible en formularios'},
+
+proyectos:{i:'building',t:'Proyectos',g:'Operación',d:'Obras en ejecución, presupuesto y responsables.',
+ c:[['Proyecto','x'],['Ubicación','t'],['Maestro de obra','p'],['Avance','b'],['Presupuesto','m'],['Entrega','d'],['Estado','s']],
+ r:[['Torre Zona 10|PRY-001 · Inmobiliaria Vista','Guatemala, Z.10','Ana Cifuentes',72,8450000,'15 mar 27','En curso'],
+ ['Residencial Los Cedros|PRY-002 · Grupo Cedros','Mixco','Jorge Sac',35,5200000,'30 sep 27','En curso'],
+ ['Bodega Industrial Mixco|PRY-003 · LogiPlus','Mixco','Ana Cifuentes',100,2100000,'10 oct 26','Completado'],
+ ['C.C. Escuintla|PRY-004 · Retail GT','Escuintla','Jorge Sac',18,12300000,'20 dic 27','En curso'],
+ ['Puente Río Michatoya|PRY-005 · Gobierno local','Escuintla','Héctor Ixcoy',54,3900000,'28 feb 27','Atrasado'],
+ ['Clínica San Rafael|PRY-006 · Salud Plus','Antigua G.','Ana Cifuentes',5,1750000,'12 ago 27','Planificación'],
+ ['Condominio Vista Hermosa|PRY-007 · Vista SA','Carretera a El Salvador','Héctor Ixcoy',92,6800000,'05 dic 26','En curso'],
+ ['Remodelación Oficinas|PRY-008 · Banco Norte','Zona 4','Jorge Sac',100,640000,'30 sep 26','Completado']],
+ ex:['Presupuesto total','Q 41.1 M'],
+ f:'codigo:string UNIQUE # Código (PRY-001)|nombre:string # Nombre de la obra|descripcion:text NULL # Alcance general|cliente_id:FK proveedores NULL # Cliente / dueño de la obra|tipo_obra:FK catalogos # Vivienda, comercial, infraestructura…|direccion:text # Dirección|departamento_geo:string # Departamento (geográfico)|municipio:string # Municipio|latitud:decimal NULL # Coordenada|longitud:decimal NULL # Coordenada|fecha_inicio:date # Inicio real|fecha_fin_estimada:date # Entrega comprometida|fecha_fin_real:date NULL # Entrega efectiva|presupuesto:decimal # Presupuesto aprobado|costo_real:decimal # Acumulado ejecutado|moneda_id:FK catalogos # Moneda|area_construccion_m2:decimal NULL # Superficie|avance_pct:decimal # Avance físico 0-100|maestro_obra_id:FK trabajadores # Responsable en campo|residente_id:FK trabajadores NULL # Residente / ingeniero|centro_costo_id:FK departamentos # Centro de costo contable|prioridad:enum(baja,media,alta) # Prioridad|estado:enum(planificacion,en_curso,atrasado,pausado,completado,cancelado) # Estado'},
+
+proveedores:{i:'truck',t:'Proveedores',g:'Finanzas',d:'Empresas que abastecen materiales y servicios.',
+ c:[['Proveedor','x'],['Contacto','p'],['Teléfono','t'],['Crédito','n'],['Calificación','r'],['Estado','s']],
+ r:[['Cementos del Sur, S.A.|NIT 1234567-8','M. López','2234-5521',30,5,'Activo'],['Ferretería El Maestro|NIT 8765432-1','J. Pérez','2456-7788',15,4,'Activo'],['Acero Centro|NIT 5551234-0','R. Díaz','2333-1020',45,3,'Inactivo'],['Distribuidora Eléctrica GT|NIT 3321456-K','L. Mejía','2366-9090',30,4,'Activo'],['Agregados Mixco|NIT 9087612-3','F. Girón','5544-1200',8,5,'Activo'],['Pinturas del Norte|NIT 4412098-7','S. Cano','2288-4411',30,3,'Activo'],['Maderas y Más|NIT 7710234-5','D. Orozco','2477-6633',0,2,'Revisión']],
+ ex:['Crédito promedio','24 días'],
+ f:'razon_social:string # Razón social|nombre_comercial:string NULL # Nombre comercial|nit:string UNIQUE # NIT (validación módulo 11)|tipo:enum(proveedor,contratista,cliente) # Rol de la entidad|categoria_id:FK catalogos NULL # Rubro principal|contacto_nombre:string # Persona de contacto|telefono:string # Teléfono|email:string NULL # Correo|direccion:text NULL # Dirección fiscal|banco_id:FK catalogos NULL # Banco|cuenta_bancaria:string NULL # No. de cuenta|condicion_pago_dias:int # Días de crédito|limite_credito:decimal NULL # Límite autorizado|regimen_fiscal:enum(general,pequeno_contribuyente,exento) # Régimen tributario|retiene_isr:bool # Aplica retención|calificacion:int # 1 a 5|notas:text NULL # Observaciones|activo:bool # Habilitado para compras'},
+
+trabajadores:{i:'hardhat',t:'Trabajadores',g:'Personas',d:'Personal de planilla y de obra.',
+ c:[['Trabajador','p'],['Puesto','g'],['Proyecto','c'],['Contrato','g'],['Salario diario','m'],['Estado','s']],
+ r:[['Carlos Tzoc|DPI 2456 ···· 0101','Albañil','PRY-001','Por obra',185,'Activo'],['Rosa Ajú|DPI 1987 ···· 0212','Residente','PRY-002','Planilla',320,'Activo'],['Mario Chen|DPI 2210 ···· 0308','Electricista','PRY-001','Por obra',210,'Inactivo'],['Jorge Sac|DPI 1744 ···· 0114','Maestro de obra','PRY-004','Planilla',380,'Activo'],['Héctor Ixcoy|DPI 2033 ···· 0501','Maestro de obra','PRY-005','Planilla',380,'Activo'],['Lucía Pop|DPI 2655 ···· 0702','Arquitecta','PRY-006','Planilla',450,'Activo'],['Esteban Coy|DPI 2788 ···· 0415','Ayudante','PRY-001','Por obra',130,'Activo'],['Pedro Xol|DPI 2398 ···· 0620','Albañil','PRY-001','Por obra',185,'Inactivo']],
+ ex:['Planilla diaria','Q 6,310'],
+ f:'codigo_empleado:string UNIQUE # Código de planilla|dpi:string UNIQUE # DPI (13 dígitos)|nit:string NULL # NIT|nombres:string # Nombres|apellidos:string # Apellidos|fecha_nacimiento:date # Nacimiento|genero:enum(f,m,otro) NULL # Género|estado_civil:string NULL # Estado civil|telefono:string # Teléfono|telefono_emergencia:string # Contacto de emergencia|nombre_emergencia:string # Nombre del contacto|direccion:text NULL # Domicilio|foto_url:string NULL # Foto|puesto_id:FK catalogos # Puesto|departamento_id:FK departamentos # Departamento|proyecto_id:FK proyectos NULL # Proyecto actual|jefe_inmediato_id:FK trabajadores NULL # Supervisor|fecha_ingreso:date # Ingreso|fecha_baja:date NULL # Baja|tipo_contrato:enum(planilla,por_obra,servicios) # Contrato|salario_diario:decimal # Salario base|bonificacion:decimal # Bonificación de ley|igss_afiliacion:string NULL # No. de afiliación IGSS|banco_id:FK catalogos NULL # Banco para pago|cuenta_bancaria:string NULL # Cuenta de depósito|tipo_sangre:string NULL # Seguridad ocupacional|talla_casco:string NULL # EPP|estado:enum(activo,inactivo,suspendido,baja) # Estado laboral'},
+
+metas:{i:'target',t:'Metas',g:'Operación',d:'Hitos y objetivos por proyecto.',
+ c:[['Meta','x'],['Responsable','p'],['Fecha límite','d'],['Prioridad','g'],['Avance','b'],['Estado','s']],
+ r:[['Fundición nivel 5|PRY-001','Ana Cifuentes','30 nov','Alta',80,'En curso'],['Instalación eléctrica T2|PRY-002','Jorge Sac','15 dic','Media',40,'En curso'],['Entrega de acabados|PRY-003','Ana Cifuentes','10 ene','Baja',10,'Pendiente'],['Cimentación pila 3|PRY-005','Héctor Ixcoy','05 nov','Alta',55,'Atrasada'],['Planos estructurales|PRY-006','Lucía Pop','28 nov','Media',100,'Completado'],['Cubierta metálica|PRY-004','Jorge Sac','20 ene','Media',22,'En curso'],['Pintura exterior|PRY-007','Héctor Ixcoy','02 dic','Baja',65,'En curso']],
+ ex:['Cumplimiento','71 %'],
+ f:'proyecto_id:FK proyectos # Proyecto|meta_padre_id:FK metas NULL # Meta superior (desglose)|titulo:string # Título|descripcion:text NULL # Detalle|responsable_id:FK trabajadores # Responsable|fecha_inicio:date # Inicio|fecha_limite:date # Fecha comprometida|fecha_cumplimiento:date NULL # Fecha real|unidad_medida_id:FK catalogos NULL # Unidad (m³, m², %)|cantidad_meta:decimal NULL # Cantidad objetivo|cantidad_lograda:decimal NULL # Cantidad alcanzada|avance_pct:decimal # Avance 0-100|prioridad:enum(baja,media,alta) # Prioridad|evidencia_url:string NULL # Foto o documento|estado:enum(pendiente,en_curso,atrasada,completada,cancelada) # Estado'},
+
+compras:{i:'cart',t:'Compras',g:'Finanzas',d:'Órdenes de compra y aprobaciones.',
+ c:[['Orden','c'],['Proveedor','t'],['Proyecto','c'],['Fecha','d'],['Total','m'],['Estado','s']],
+ r:[['OC-2026-118','Cementos del Sur','PRY-001','18 nov',48500,'Aprobada'],['OC-2026-119','Acero Centro','PRY-004','19 nov',112300,'Pendiente'],['OC-2026-120','Ferretería El Maestro','PRY-002','19 nov',6780,'Aprobada'],['OC-2026-121','Distribuidora Eléctrica GT','PRY-001','20 nov',23400,'Pendiente'],['OC-2026-122','Cementos del Sur','PRY-005','20 nov',31900,'Rechazada'],['OC-2026-123','Pinturas del Norte','PRY-007','21 nov',18250,'Borrador'],['OC-2026-117','Agregados Mixco','PRY-003','14 nov',9600,'Recibido'],['OC-2026-116','Ferretería El Maestro','PRY-001','11 nov',4120,'Recibido']],
+ ex:['Por aprobar','Q 135,700'],
+ f:'numero_oc:string UNIQUE # Correlativo OC-AAAA-###|proveedor_id:FK proveedores # Proveedor|proyecto_id:FK proyectos # Proyecto destino|bodega_destino_id:FK bodegas NULL # Bodega del proyecto que recibe|requisicion_id:FK compras NULL # Requisición de origen|fecha:date # Fecha de emisión|fecha_entrega_estimada:date NULL # Entrega prometida|condicion_pago_dias:int # Crédito|moneda_id:FK catalogos # Moneda|tipo_cambio:decimal # Tipo de cambio|subtotal:decimal # Subtotal|descuento:decimal # Descuento|iva:decimal # IVA (12%)|total:decimal # Total|lugar_entrega:string NULL # Bodega/obra|observaciones:text NULL # Notas|solicitado_por:FK usuarios # Solicitante|aprobado_por:FK usuarios NULL # Aprobador|fecha_aprobacion:datetime NULL # Aprobación|motivo_rechazo:text NULL # Razón de rechazo|adjunto_url:string NULL # Cotización PDF|estado:enum(borrador,pendiente,aprobada,rechazada,recibida,anulada) # Estado|detalle:json # Líneas: inventario_id, cantidad, precio, subtotal'},
+
+tesoreria:{i:'bank',t:'Tesorería',g:'Finanzas',d:'Ingresos, egresos y conciliación bancaria.',
+ c:[['Fecha','d'],['Concepto','x'],['Cuenta','g'],['Tipo','g'],['Monto','mv'],['Estado','s']],
+ r:[['18 nov','Pago a proveedor|OC-2026-118','Banrural','Egreso',-48500,'Conciliado'],['19 nov','Anticipo cliente|PRY-004','BAC','Ingreso',250000,'Conciliado'],['20 nov','Planilla semanal|Semana 46','Banrural','Egreso',-31200,'Pendiente'],['20 nov','Pago de estimación|PRY-001','BAC','Ingreso',420000,'Pendiente'],['19 nov','Combustible maquinaria|Caja chica','Caja','Egreso',-2850,'Conciliado'],['17 nov','Cobro retención|PRY-003','BAC','Ingreso',96000,'Conciliado'],['21 nov','Pago IGSS|Octubre','Banrural','Egreso',-18420,'Pendiente']],
+ ex:['Saldo disponible','Q 1.84 M'],
+ f:'tipo:enum(ingreso,egreso,traslado) # Naturaleza|cuenta_bancaria_id:FK catalogos # Cuenta afectada|cuenta_destino_id:FK catalogos NULL # Para traslados|fecha:date # Fecha de operación|fecha_valor:date NULL # Fecha valor bancaria|concepto:string # Descripción|monto:decimal # Monto|moneda_id:FK catalogos # Moneda|tipo_cambio:decimal # Tipo de cambio|forma_pago:enum(transferencia,cheque,efectivo,tarjeta) # Forma de pago|referencia:string NULL # No. boleta / cheque|beneficiario:string NULL # Pagado a / recibido de|compra_id:FK compras NULL # Orden pagada|cxp_id:FK cxp NULL # Cuenta por pagar que cancela|cxc_id:FK cxc NULL # Cuenta por cobrar que se cobra|proyecto_id:FK proyectos NULL # Proyecto|asiento_id:FK contabilidad NULL # Asiento generado|conciliado:bool # Conciliado con banco|fecha_conciliacion:date NULL # Conciliación|comprobante_url:string NULL # Boleta escaneada'},
+
+reportes:{i:'chart',t:'Reportes',g:'Datos',d:'Informes programados y bajo demanda.',
+ c:[['Reporte','x'],['Módulo','g'],['Formato','g'],['Frecuencia','g'],['Última ejecución','d'],['Estado','s']],
+ r:[['Avance por proyecto|Para gerencia','Proyectos','PDF','Semanal','Hoy 06:00','Listo'],['Stock crítico|Alerta a bodega','Inventarios','Excel','Diario','Hoy 05:30','Listo'],['Estado de resultados|NIIF para PYMES','Contabilidad','PDF','Mensual','01 nov','Programado'],['Planilla de obra|Pago semanal','Trabajadores','Excel','Semanal','Ayer 18:00','Listo'],['Flujo de caja|Proyección 90 días','Tesorería','PDF','Mensual','01 nov','Programado'],['Compras por proveedor|Comparativo','Compras','Excel','Bajo demanda','12 nov','Listo']],
+ ex:['Programados','8'],
+ f:'nombre:string # Nombre del reporte|descripcion:text NULL # Objetivo|modulo:string # Módulo origen|consulta_definicion:json # Filtros, columnas, agrupaciones|formato:enum(pdf,excel,csv) # Formato|programacion:enum(bajo_demanda,diario,semanal,mensual) # Frecuencia|hora_envio:string NULL # Hora programada|destinatarios:json # Correos|ultima_ejecucion:datetime NULL # Última corrida|ultimo_archivo_url:string NULL # Archivo generado|visibilidad:enum(privado,rol,publico) # Quién lo ve|creado_por:FK usuarios # Autor|activo:bool # Habilitado'},
+
+contabilidad:{i:'ledger',t:'Libro diario',g:'Finanzas',d:'Asientos contables de partida doble bajo NIIF.',
+ c:[['Asiento','c'],['Fecha','d'],['Cuenta','x'],['Debe','m'],['Haber','m'],['Norma','g']],
+ r:[['A-0345','18 nov','1105 Inventarios|Compra OC-2026-118',48500,null,'NIIF PYMES'],['A-0345','18 nov','2101 Proveedores|Compra OC-2026-118',null,48500,'NIIF PYMES'],['A-0346','20 nov','5101 Costo de obra|Planilla semana 46',31200,null,'NIIF PYMES'],['A-0346','20 nov','2105 Sueldos por pagar|Planilla semana 46',null,31200,'NIIF PYMES'],['A-0347','20 nov','1201 Maquinaria|Alta ACT-031',385000,null,'NIIF PYMES'],['A-0347','20 nov','2101 Proveedores|Alta ACT-031',null,385000,'NIIF PYMES'],['A-0348','21 nov','6102 Depreciación|Cierre mensual',14820,null,'NIIF PYMES'],['A-0348','21 nov','1299 Deprec. acumulada|Cierre mensual',null,14820,'NIIF PYMES']],
+ ex:['Asientos del mes','48'],
+ f:'numero_asiento:string # Correlativo|fecha:date # Fecha contable|periodo_id:FK catalogos # Período (AAAA-MM)|linea:int # Línea dentro del asiento|cuenta_id:FK plan # Cuenta del plan de cuentas|cuenta_codigo:string INDEX # Código de cuenta (copia para reportes)|cuenta_nombre:string # Nombre de cuenta|descripcion:string # Glosa|debe:decimal # Debe|haber:decimal # Haber|moneda_id:FK catalogos # Moneda|tipo_cambio:decimal # Tipo de cambio|norma:enum(niif_completas,niif_pymes) # Marco normativo|tipo_asiento:enum(manual,automatico,ajuste,cierre) # Origen|centro_costo_id:FK departamentos NULL # Centro de costo|proyecto_id:FK proyectos NULL # Proyecto|documento_tipo:string NULL # Compra, tesorería, activo…|documento_id:uuid NULL # Registro origen|conciliado:bool # Revisado por contador|cerrado:bool # Período cerrado (inmutable)'},
+
+activos:{i:'tractor',t:'Activos',g:'Operación',d:'Maquinaria, vehículos y herramienta mayor.',
+ c:[['Activo','x'],['Categoría','g'],['Ubicación','t'],['Costo','m'],['Depreciación','b'],['Responsable','p'],['Estado','s']],
+ r:[['Retroexcavadora CAT 420|ACT-010','Maquinaria','PRY-001',685000,58,'Jorge Sac','Operativo'],['Mezcladora 1 saco|ACT-024','Equipo','PRY-002',18500,34,'Esteban Coy','Operativo'],['Camión 10 ton|ACT-031','Vehículos','Taller',385000,4,'Julio Pérez','Revisión'],['Compactadora de placa|ACT-036','Equipo','PRY-004',24800,71,'Héctor Ixcoy','Operativo'],['Grúa torre 40 m|ACT-002','Maquinaria','PRY-001',1250000,40,'Ana Cifuentes','Operativo'],['Pick-up Hilux|ACT-018','Vehículos','PRY-005',210000,82,'Héctor Ixcoy','Operativo'],['Andamio modular (50 u)|ACT-044','Herramienta','PRY-007',46000,25,'Esteban Coy','Operativo']],
+ ex:['Valor en libros','Q 1.9 M'],
+ f:'codigo:string UNIQUE # Código de activo (ACT-###)|descripcion:string # Descripción|marca:string NULL # Marca|modelo:string NULL # Modelo|serie:string NULL UNIQUE # Serie / placa|categoria_id:FK catalogos # Categoría|proveedor_id:FK proveedores NULL # Comprado a|compra_id:FK compras NULL # Orden de compra|fecha_adquisicion:date # Adquisición|costo:decimal # Costo de adquisición|valor_residual:decimal # Valor residual|vida_util_meses:int # Vida útil|metodo_depreciacion:enum(linea_recta,saldos_decrecientes,unidades) # Método NIIF|depreciacion_acumulada:decimal # Depreciación acumulada|valor_en_libros:decimal # Valor neto|horas_uso:decimal NULL # Horómetro|ultimo_mantenimiento:date NULL # Último servicio|proximo_mantenimiento:date NULL # Próximo servicio|ubicacion_proyecto_id:FK proyectos NULL # Ubicación|responsable_id:FK trabajadores # Responsable|poliza_seguro:string NULL # Póliza|estado:enum(operativo,en_revision,en_taller,baja) # Estado'},
+
+migraciones:{i:'migrate',t:'Depuración y migraciones',g:'Datos',d:'Importa Excel o sistemas legacy y estandariza la información.',
+ c:[['Origen','x'],['Destino','g'],['Filas','n'],['Válidas','n'],['Errores','n'],['Fecha','d'],['Estado','s']],
+ r:[['inventario_2019.xlsx|Excel · 3 hojas','Inventarios',1240,1198,11,'Hoy 09:10','Completado'],['SistemaViejo_Clientes|BD legacy (SQL Server)','Proveedores',8905,8420,485,'Ayer','Revisión'],['planilla_obra.xlsx|Excel · 1 hoja','Trabajadores',312,198,114,'18 nov','Error'],['catalogo_materiales.csv|CSV · UTF-8','Catálogos',640,640,0,'12 nov','Completado'],['activos_2022.xlsx|Excel · 2 hojas','Activos',96,91,5,'05 nov','Completado']],
+ ex:['Registros depurados','10,982'],
+ f:'nombre_origen:string # Archivo o sistema|tipo_origen:enum(excel,csv,bd_legacy,api) # Tipo de fuente|conexion_ref:string NULL # Referencia a conexión (sin credenciales)|hoja_o_tabla:string NULL # Hoja / tabla leída|modulo_destino:string # Módulo destino|plantilla_id:FK migraciones NULL # Plantilla de mapeo reutilizable|mapeo_columnas:json # origen → campo estándar|reglas_depuracion:json # Trim, mayúsculas, duplicados, homologar|filas_leidas:int # Leídas|filas_validas:int # Válidas|filas_duplicadas:int # Fusionadas|filas_error:int # Con error|modo:enum(simulacion,importacion) # Simulación o carga real|puede_revertir:bool # Admite deshacer|lote_importacion:string UNIQUE # Identificador del lote|ejecutado_por:FK usuarios # Quien ejecutó|iniciado_en:datetime # Inicio|finalizado_en:datetime NULL # Fin|log_errores:json NULL # Detalle por fila|archivo_url:string NULL # Respaldo del archivo original|estado:enum(borrador,validando,revision,importando,completado,error,revertido) # Estado'},
+
+departamentos:{i:'org',t:'Departamentos',g:'Personas',d:'Estructura organizacional y centros de costo.',
+ c:[['Departamento','x'],['Jefe','p'],['Personal','n'],['Presupuesto anual','m'],['Ejecución','b'],['Estado','s']],
+ r:[['Obra civil|CC-100','Ana Cifuentes',96,3200000,68,'Activo'],['Administración|CC-200','Luis Marroquín',8,980000,74,'Activo'],['Compras|CC-300','Rosa Ajú',5,420000,61,'Activo'],['Bodega|CC-400','Julio Pérez',6,350000,57,'Activo'],['Contabilidad|CC-500','Sofía Barrios',4,380000,70,'Activo'],['Seguridad industrial|CC-600','Lucía Pop',3,210000,45,'Inactivo']],
+ ex:['Centros de costo','6'],
+ f:'codigo:string UNIQUE # Código del departamento|nombre:string # Nombre|descripcion:text NULL # Funciones|centro_costo:string UNIQUE # Centro de costo (CC-###)|jefe_id:FK trabajadores NULL # Jefe|padre_id:FK departamentos NULL # Departamento superior|presupuesto_anual:decimal # Presupuesto del año|moneda_id:FK catalogos # Moneda|cuenta_contable:string NULL # Cuenta de gasto asociada|activo:bool # Vigente'}
+};
+
+// Navegación por grupos y acceso por perfil
+const PROF={admin:{n:'Luis Marroquín',r:'Administrativo',d:'Control total: compras, finanzas y datos.'},maestro:{n:'Ana Cifuentes',r:'Maestro de Obra',d:'Obra, bodega y personal a cargo.'},obrero:{n:'Carlos Tzoc',r:'Obrero',d:'Vista simple: pedir material y ver tareas.'}};

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Panoramic · ERP de construcción (mockup)</title>
+<link rel="stylesheet" href="styles.css"></head>
+<body>
+<aside id="side" aria-label="Navegación principal">
+  <div class="brand"><img src="logo.jpg" alt="Logo"><div class="lbl"><b>Panoramic</b><small>Gestión de obra</small></div></div>
+  <nav id="nav"></nav>
+  <div class="side-foot lbl"><span id="sfIc"></span><div><b>¿Primera vez?</b><small>Haz el recorrido guiado</small></div><button class="btn sm" data-a="tour">Iniciar</button></div>
+</aside>
+<div id="scrim" data-a="side0"></div>
+
+<div class="main">
+<header class="top">
+  <button class="ib" id="menu" data-a="side1" aria-label="Abrir menú"></button>
+  <button class="ib" id="coll" data-a="coll" aria-label="Contraer menú"></button>
+  <div class="crumbs" id="crumbs"></div>
+  <label class="search" id="searchBox"><span id="qIc"></span><input id="q" placeholder="Buscar en la tabla…" aria-label="Buscar" autocomplete="off"><kbd>/</kbd></label>
+  <div class="tools">
+    <button class="ib" id="tourBtn" data-a="tour" title="Tour guiado" aria-label="Tour guiado"></button>
+    <div class="pop" id="bellPop"><button class="ib" id="bellBtn" data-a="pop" title="Notificaciones" aria-label="Notificaciones"></button>
+      <div class="menu wide" id="bellMenu"></div></div>
+    <div class="pop" id="themePop"><button class="ib" id="themeBtn" data-a="pop" title="Apariencia" aria-label="Apariencia"></button>
+      <div class="menu" id="themeMenu"></div></div>
+    <div class="pop" id="profPop"><button class="who" id="profBtn" data-a="pop" aria-label="Perfil"></button>
+      <div class="menu wide" id="profMenu"></div></div>
+  </div>
+</header>
+<main id="view"></main>
+</div>
+
+<div id="dscrim" data-a="dclose"></div>
+<aside id="drawer" aria-label="Detalle"></aside>
+<div id="welcome"></div>
+<div id="toast" role="status"></div>
+
+<section id="login" aria-label="Inicio de sesión">
+  <div class="lg-art">
+    <div class="lg-brand"><img src="logo.jpg" alt=""><b>Panoramic</b></div>
+    <div id="lgArt" class="lg-svg"></div>
+    <div class="lg-copy">
+      <h2>Cada obra,<br>bajo control.</h2>
+      <p>Bodegas por proyecto, compras, contabilidad NIIF y facturación en un solo lugar.</p>
+      <div class="lg-stats"><div><b>8</b><span>proyectos</span></div><div><b>5</b><span>bodegas</span></div><div><b>100 %</b><span>trazable</span></div></div>
+    </div>
+  </div>
+  <div class="lg-form">
+    <button class="ib lg-theme" id="lgTheme" data-a="lgtheme" type="button" aria-label="Cambiar apariencia"></button>
+    <div id="lgCard">
+      <h1>Ingresa a tu obra</h1>
+      <p class="sub">Elige un perfil de demostración o escribe tus datos.</p>
+      <div id="lgProf" class="lg-prof"></div>
+      <form id="lgForm" class="lf" novalidate>
+        <label for="lgUser">Correo</label>
+        <div class="inp"><span class="lgi" data-i="mail"></span><input id="lgUser" type="email" autocomplete="username" placeholder="usuario@panoramic.gt"></div>
+        <label for="lgPass">Contraseña</label>
+        <div class="inp"><span class="lgi" data-i="key"></span><input id="lgPass" type="password" autocomplete="current-password" placeholder="••••••••"><button type="button" class="eye lgi" data-i="eye" data-a="lgshow" aria-label="Mostrar contraseña"></button></div>
+        <div id="lgErr" role="alert"></div>
+        <button class="btn lg-go" id="lgGo" type="submit">Ingresar</button>
+        <div id="lgSteps"></div>
+      </form>
+      <p class="lg-hint">Demostración: los datos son ficticios. Contraseña de prueba: <b>panoramic</b></p>
+    </div>
+  </div>
+</section>
+
+<script src="data.js"></script>
+<script src="data2.js"></script>
+<script src="app.js"></script>
+<script src="extra.js"></script>
+</body></html>
